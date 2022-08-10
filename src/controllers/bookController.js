@@ -327,8 +327,7 @@ const updateBook = async function (req, res) {
       return res
         .status(400)
         .send({ status: false, message: "please provide valid excerpt" });
-    }
-     else {
+    } else {
       book.excerpt = data.excerpt;
     }
 
