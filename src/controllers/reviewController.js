@@ -48,7 +48,7 @@ const createReview = async function (req, res) {
         message: "Rating must be 1 to 5",
       });
     }
-    if (Object.keys(reviewData).indexOf("review") !== -1) {
+    if (review) {
       if (!validateString(review)) {
         return res.status(400).send({
           status: false,
@@ -136,7 +136,7 @@ const updateReview = async function (req, res) {
         .send({ status: false, message: "Enter valid review" });
     }
 
-    if (rating != undefined) {
+    if (rating !== undefined) {
       if (!validateNumber(rating)) {
         return res
           .status(400)
@@ -222,16 +222,9 @@ let deleteReview = async function (req, res) {
       { $set: { isDeleted: true } }
     );
 
-    let reviewsleft = await reviewModel.find({
-      bookId: bookId,
-      isDeleted: false,
-    });
-
-    let reviews = reviewsleft.length;
-
     let updatedData = await bookModel.findOneAndUpdate(
       { _id: bookId },
-      { $set: { reviews: reviews } }
+      { $inc: { reviews: -1 } }
     );
     res.status(200).send({ status: true, message: "Success" });
   } catch (err) {

@@ -1,14 +1,9 @@
 let userModel = require("../models/userModel");
 let jwt = require("jsonwebtoken");
+
 const {
   validateString,
-  convertToArray,
-  checkValue,
-  validateEmail,
-  validatePassword,
   validateRequest,
-  validateNumber,
-  isValidObjectId,
   regxValidator,
   regexNumber,
   passwordLength,
@@ -16,6 +11,7 @@ const {
 } = require("../validator/validation");
 
 const validator = require("validator");
+const { response } = require("express");
 
 //  <=================================>[CREATE USER API] <==============================>
 
@@ -26,107 +22,93 @@ const createUser = async function (req, res) {
     if (!validateRequest(user)) {
       return res
         .status(400)
-        .send({ status: false, message: "details is required in body" });
+        .json({ status: false, message: "details is required in body" });
     }
 
     if (!validateString(user.title)) {
       return res
         .status(400)
-        .send({ status: false, message: "title must be required" });
+        .json({ status: false, message: "title is required" });
     }
     if (!validateEnum(user.title)) {
       return res
         .status(400)
-        .send({ status: false, message: "title must be 'Mr' /'Mrs' /'Miss'" });
+        .json({ status: false, message: "title must be 'Mr' /'Mrs' /'Miss'" });
     }
 
     if (!validateString(user.name)) {
       return res
         .status(400)
-        .send({ status: false, message: "name is required" });
+        .json({ status: false, message: "name is required" });
     }
     if (!regxValidator(user.name)) {
       return res
         .status(400)
-        .send({ status: false, message: "please provide a valid name" });
+        .json({ status: false, message: "please provide a valid name" });
     }
 
     if (!validateString(user.phone)) {
       return res
         .status(400)
-        .send({ status: false, message: "phone is required" });
+        .json({ status: false, message: "phone is required" });
     }
     if (!regexNumber(user.phone)) {
-      return res
-        .status(400)
-        .send({
-          status: false,
-          message:
-            "please enter a valid number/number must be start with 9/8/7/6",
-        });
+      return res.status(400).json({
+        status: false,
+        message:
+          "please enter a valid number/number must be start with 9/8/7/6",
+      });
     }
-    const checkPhone = await userModel.findOne({ phone: user.phone });
-    if (checkPhone) {
-      return res
-        .status(400)
-        .send({
-          status: false,
-          message: `number ${user.phone} is already used`,
-        });
-    }
+
     if (!validateString(user.email)) {
       return res
         .status(400)
-        .send({ status: false, message: "email is required" });
+        .json({ status: false, message: "email is required" });
     }
     if (!validator.isEmail(user.email)) {
       return res
         .status(400)
-        .send({ status: false, message: "email is not correct" });
+        .json({ status: false, message: "email is not correct" });
     }
-    const checkEmailId = await userModel.findOne({ email: user.email });
-    if (checkEmailId) {
-      return res
-        .status(400)
-        .send({
-          status: false,
-          message: `email ${user.email} is already used`,
-        });
+    const checkDuplicate = await userModel.findOne({
+      $or: [{ email: user.email }, { phone: user.phone }],
+    });
+    if (checkDuplicate) {
+      return res.status(400).json({
+        status: false,
+        message: `email ${user.email} or phone ${user.phone} is already used`,
+      });
     }
     if (!passwordLength(user.password)) {
       return res
         .status(400)
-        .send({ status: false, message: "password must be between 8 to 15" });
+        .json({ status: false, message: "password must be between 8 to 15" });
     }
-    if (!validateString(user.address)) {
-      return res
-        .status(400)
-        .send({ status: false, message: "please provide address" });
+    if (user.address) {
+      if (user.address.street && !validateString(user.address.street)) {
+        return res
+          .status(400)
+          .json({ status: false, message: "please provide street" });
+      }
+      if (user.address.city && !validateString(user.address.city)) {
+        return res
+          .status(400)
+          .json({ status: false, message: "please provide city" });
+      }
+      if (user.address.pincode && !validateString(user.address.pincode)) {
+        return res
+          .status(400)
+          .json({ status: false, message: "please provide pincode" });
+      }
     }
-    if (!validateString(user.address.street)) {
-      return res
-        .status(400)
-        .send({ status: false, message: "please provide street" });
-    }
-    if (!validateString(user.address.city)) {
-      return res
-        .status(400)
-        .send({ status: false, message: "please provide city" });
-    }
-    if (!validateString(user.address.pincode)) {
-      return res
-        .status(400)
-        .send({ status: false, message: "please provide pincode" });
-    }
-
     let userCreated = await userModel.create(user);
-    res.status(201).send({
+    res.status(201).json({
       status: true,
       message: "Success",
       data: userCreated,
     });
   } catch (error) {
-    return res.status(500).send({ status: false, message: error.message });
+    return res.status(500).json({ status: false, message: error.message });
   }
 };
 
@@ -134,22 +116,32 @@ const createUser = async function (req, res) {
 
 let userLogin = async function (req, res) {
   try {
-    let email = req.body.email;
-    let password = req.body.password;
+    if (!validateRequest(req.body)) {
+      return res
+        .status(400)
+        .json({ status: false, message: "details is required in body" });
+    }
+    let { email, password } = req.body;
     if (!validateString(email)) {
       return res
         .status(400)
-        .send({ status: false, message: "email is required" });
+        .json({ status: false, message: "email is required" });
     }
-    if (!validateString(password)) {
+    if (!validator.isEmail(email)) {
       return res
         .status(400)
-        .send({ status: false, message: "password is required" });
+        .json({ status: false, message: "email is not correct" });
+    }
+    if (!validateString(password) || !passwordLength(password)) {
+      return res.status(400).json({
+        status: false,
+        message: "password is required and should be of 8 to 15 characters",
+      });
     }
 
     let user = await userModel.findOne({ email: email, password: password });
     if (!user)
-      return res.status(400).send({
+      return res.status(400).json({
         status: false,
         message: "email or the password is not correct",
       });
@@ -157,16 +149,14 @@ let userLogin = async function (req, res) {
       {
         userId: user._id.toString(),
         iat: new Date().getTime(),
-        exp: "1d",
+        expiresIn: "24h",
       },
       "functionup-radon"
     );
-
-    res
-      .status(200)
-      .send({ status: true, message: "Success", data: { token: token } });
+    res.setHeader("x-api-key", token);
+    res.status(200).json({ status: true, message: "Success", data: token });
   } catch (err) {
-    return res.status(500).send({ status: false, message: err.message });
+    return res.status(500).json({ status: false, message: err.message });
   }
 };
 

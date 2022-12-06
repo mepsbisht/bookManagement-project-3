@@ -98,7 +98,7 @@ const regxValidator = function (val) {
 }
 
 const regexNumber = function (val) {
-  let regx = /^([+]\d{2})?\d{10}$/
+  let regx = /^[6-9][0-9]{9}$/
   return regx.test(val)
 }
 

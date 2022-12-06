@@ -1,7 +1,7 @@
 let express = require("express")
 let router = express.Router()
 let { createUser, userLogin } = require("../controllers/userController")
-let { createBook, getBooks, updateBook, deleteBook, getBookById , bookCoverUrl} = require("../controllers/bookController")
+let { createBook, getBooks, updateBook, deleteBook, getBookById } = require("../controllers/bookController")
 let { createReview, updateReview, deleteReview } = require("../controllers/reviewController")
 let { authenticate, authorise, authorisePutAndDelete } = require("../middleware/auth")
 const { uploadFile } = require("../controllers/awsController");
@@ -22,10 +22,6 @@ router.delete("/books/:bookId", authenticate, authorisePutAndDelete, deleteBook)
 router.post("/books/:bookId/review", createReview)
 router.put("/books/:bookId/review/:reviewId", updateReview)
 router.delete("/books/:bookId/review/:reviewId", deleteReview)
-
-// =============================================================AWS API=================================================================
-router.post("/bookCoverUrl",bookCoverUrl)
-
 
 
 module.exports = router;
